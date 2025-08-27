@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+        <title>TP Entregable</title>
+        <link rel='stylesheet' href='https://code.jquery.com/ui/1.11.1/themes/smoothness/jquery-ui.css'>
+        <script src='https://code.jquery.com/jquery-1.12.4.js'></script>
+        <script src='https://code.jquery.com/ui/1.12.1/jquery-ui.js'></script>
+        <script>
+                const url = 'https://jsonplaceholder.typicode.com/posts'
+
+                window.onload = function() {
+                        $('#popUp').hide()
+                        getObjects()
+                }
+
+                //PROMESAS//
+
+                function loadObjects() {
+                        return new Promise(function(resolve, reject) {
+                                var request = new XMLHttpRequest()
+                                request.open('GET', url)
+                                request.responseType = 'json'
+                                request.onload = function() {
+                                        if (request.status == 200) {
+                                                resolve(request.response)
+                                        } else {
+                                                reject(Error(request.statusText))
+                                        }
+                                }
+                                request.onerror = function() {
+                                        reject(Error('Error: unexpected network error.'))
+                                }
+                                request.send()
+                        })
+                }
+
+                function addObject() {
+                        return new Promise(function(resolve, reject) {
+                                var request = new XMLHttpRequest()
+                                request.open('POST', url)
+                                request.setRequestHeader('Content-Type', 'application/json')
+                                var object = JSON.stringify({
+                                        'title': document.getElementById('title').value,
+                                        'userId': document.getElementById('userId').value
+                                })
+                                request.onload = function() {
+                                        if (request.status == 201) {
+                                                resolve(request.response)
+                                        } else {
+                                                reject(Error(request.statusText))
+                                        }
+                                }
+                                request.onerror = function() {
+                                        reject(Error('Error: unexpected network error.'))
+                                }
+                                request.send(object)
+                        })
+                }
+
+                function removeObject(id) {
+                        return new Promise(function(resolve, reject) {
+                                var request = new XMLHttpRequest()
+                                request.open('DELETE', url + `/${id}`)
+                                request.onload = function() {
+                                        if (request.status == 200) {
+                                                resolve(request.response)
+                                        } else {
+                                                reject(Error(request.statusText))
+                                        }
+                                }
+                                request.onerror = function() {
+                                        reject(Error('Error: unexpected network error.'))
+                                }
+                                request.send()
+                        })
+                }
+
+                function modifyObject() {
+                        return new Promise(function(resolve, reject) {
+                                var request = new XMLHttpRequest()
+                                request.open('PATCH', url + `/${document.getElementsByName('id2')[0].value}`)
+                                request.setRequestHeader('Content-Type', 'application/json')
+                                var object = JSON.stringify({
+                                        'title': document.getElementsByName('title2')[0].value,
+                                        'userId': document.getElementsByName('userId2')[0].value
+                                })
+                                request.onload = function() {
+                                        if (request.status == 200) {
+                                                resolve(request.response)
+                                        } else {
+                                                reject(Error(request.statusText))
+                                        }
+                                }
+                                request.onerror = function() {
+                                        reject(Error('Error: unexpected network error.'))
+                                }
+                                request.send(object)
+                        })
+                }
+
+                //FUNCIONES QUE CONSUMEN LAS PROMESAS//
+
+                function getObjects() {
+                        loadObjects().then(response => {
+                                var tbody = document.querySelector('tbody')
+                                tbody.innerHTML = ''
+                                response.forEach(object => {
+                                        insertTr(object)
+                                })
+                        }).catch(reason => {
+                                console.error(reason)
+                        })
+                }
+
+                function saveObject() {
+                        if (document.getElementById('title').value.trim() !== '' &&
+                                document.getElementById('userId').value.trim() !== '') {
+                                addObject().then((response) => {
+                                        var object = JSON.parse(response)
+                                        insertTr(object)
+                                }).catch(reason => {
+                                        console.error(reason)
+                                })
+                        }
+                }
+
+                function deleteObject(object) {
+                        removeObject(object.id).then(() => {
+                                var rows = document.querySelectorAll('tr')
+                                rows.forEach(row => {
+                                        if (parseInt(row.getAttribute('id')) === parseInt(object.id)) {
+                                                row.remove()
+                                                clearInputs()
+                                        }
+                                })
+                        }).catch(reason => {
+                                console.error(reason)
+                        })
+                }
+
+                function updateObject() {
+                        if (document.getElementsByName('title2')[0].value.trim() !== '' &&
+                                document.getElementsByName('userId2')[0].value.trim() !== '') {
+                                modifyObject().then(() => {
+                                        var rows = document.querySelectorAll('tr')
+                                        rows.forEach(row => {
+                                                if (row.getAttribute('id') === document.getElementsByName('id2')[0].value) {
+                                                        var object = JSON.stringify({
+                                                                'id': document.getElementsByName('id2')[0].value,
+                                                                'title': document.getElementsByName('title2')[0].value
+                                                        })
+                                                        row.childNodes[1].innerHTML = document.getElementsByName('title2')[0].value,
+                                                                row.childNodes[2].innerHTML = document.getElementsByName('userId2')[0].value,
+                                                                row.childNodes[3].innerHTML = `<button onclick='viewObject(${object})'>VIEW</button>`
+                                                        row.childNodes[4].innerHTML = `<button onclick='deleteObject(${object})'>DELETE</button>`
+                                                }
+                                        })
+                                        $('#popUp').dialog('close')
+                                        clearInputs()
+                                }).catch(reason => {
+                                        console.error(reason)
+                                })
+                        }
+                }
+
+                //FUNCIONES DE AGREGADO//
+
+                function insertTr(object) {
+                        var tbody = document.querySelector('tbody')
+                        var row = tbody.insertRow()
+                        row.setAttribute('id', object.id)
+                        var id = row.insertCell()
+                        id.innerHTML = object.id
+                        var title = row.insertCell()
+                        title.innerHTML = object.title
+                        var userId = row.insertCell()
+                        userId.innerHTML = object.userId
+                        var object = JSON.stringify({
+                                'id': object.id,
+                                'title': object.title,
+                                'userId': object.userId
+                        })
+                        var view = row.insertCell()
+                        view.innerHTML = `<button onclick='viewObject(${object})'>VIEW</button>`
+                        var del = row.insertCell()
+                        del.innerHTML = `<button onclick='deleteObject(${object})'>DELETE</button>`
+                        clearInputs()
+                }
+
+                function viewObject(object) {
+                        document.getElementsByName('id2')[0].value = object.id
+                        document.getElementsByName('title2')[0].value = object.title
+                        document.getElementsByName('userId2')[0].value = object.userId
+                        $('#popUp').dialog({
+                                closeText: ''
+                        }).css('font-size', '15px')
+                }
+
+                function clearInputs() {
+                        document.getElementById('title').value = ''
+                        document.getElementById('userId').value = ''
+                        document.getElementById('title').focus()
+                }
+        </script>
+</head>
+
+<body>
+        <table style='border: 1px solid'>
+                <thead>
+                        <tr>
+                                <th style='text-align: left'>ID</th>
+                                <th style='text-align: left'>TITLE</th>
+                                <th style='text-align: left'>USER ID</th>
+                                <th colspan='2'></th>
+                        </tr>
+                </thead>
+                <tbody>
+                </tbody>
+                <tfoot>
+                        <tr>
+                                <td></td>
+                                <td><input id='title' /></td>
+                                <td><input id='userId' /></td>
+                                <td colspan='2' style='text-align: center'><button onclick='saveObject()'>ADD</button></td>
+                        </tr>
+                </tfoot>
+        </table>
+
+        <div id='popUp' style="overflow-x: hidden">
+                <table>
+                        <tr>
+                                <td><label for='id2' style='font-weight: bold'>ID</label></td>
+                                <td><input name='id2' style='text-align: right' readonly /></td>
+                        </tr>
+                        <tr>
+                                <td><label for='title2' style='font-weight: bold'>TITLE</label></td>
+                                <td><input name='title2' style='text-align: right' /></td>
+                        </tr>
+                        <tr>
+                                <td><label for='userId2' style='font-weight: bold'>USER ID</label></td>
+                                <td><input name='userId2' style='text-align: right' /></td>
+                        </tr>
+                        <tr>
+                                <td colspan='2' style='text-align: center'><button onclick='updateObject()'>UPDATE</button></td>
+                        </tr>
+                </table>
+        </div>
+</body>
+
+</html>
